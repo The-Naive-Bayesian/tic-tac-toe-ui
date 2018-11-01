@@ -2,25 +2,27 @@ import React, { Component } from 'react';
 import './App.css';
 import Board from "./Board";
 
+const initialState = {
+    boardState: [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+    ],
+    potentialNextState: [
+        [0, 0, 0],
+        [0, 0, 0],
+        [0, 0, 0],
+    ],
+    selectedSquare: null,
+    loading: false,
+    complete: false,
+    winner: null
+};
+
 class App extends Component {
     constructor(props) {
         super(props);
-        this.state = {
-            boardState: [
-                [{fill: 'black'}, null, null],
-                [null, {fill: 'red'}, null],
-                [null, null, {fill: 'black'}],
-            ],
-            potentialNextState: [
-                [{fill: 'black'}, null, null],
-                [null, {fill: 'red'}, null],
-                [null, null, {fill: 'black'}],
-            ],
-            selectedSquare: null,
-            loading: false,
-            complete: false,
-            playerWon: false
-        }
+        this.state = {...initialState};
     }
 
     saveMove = () => {
@@ -29,25 +31,28 @@ class App extends Component {
         if (!selectedSquare) {
             return false;
         }
-        const newState = this._fillWithColor(selectedSquare.x, selectedSquare.y, 'black');
+        const newState = this._fillWithNumber(selectedSquare.x, selectedSquare.y, 1);
         this.setState({
-            boardState: newState,
-            potentialNextState: newState,
             loading: true,
+            selectedSquare: null
         });
-        this.getOpponentMove().then(newState => this.setState({
-            boardState: newState,
-            potentialNextState: newState,
-            loading: false
+        this.getOpponentMove(newState).then(({boardState, finished, winner}) => this.setState({
+            boardState,
+            potentialNextState: boardState,
+            loading: false,
+            complete: finished,
+            winner
         }));
     };
 
-    getOpponentMove = () => {
-        return fetch('http://localhost:4200/tic-tac-toe', {
+    getOpponentMove = (boardState) => {
+        return fetch('https://wt-c9e7248ce110a8011618a06ccf73d34f-0.sandbox.auth0-extend.com/tic-tac-toe', {
             method: 'POST',
             mode: "cors",
             headers: {"Content-Type": "application/json; charset=utf-8"},
-            body: JSON.stringify(this.state.boardState)
+            body: JSON.stringify({
+                boardState
+            })
         }).then(res => {
             return res.json();
         });
@@ -55,7 +60,7 @@ class App extends Component {
 
     clickHandleGenerator = (x, y) => {
         return () => {
-            const nextState = this._fillWithColor(x, y, 'grey');
+            const nextState = this._fillWithNumber(x, y, 3);
             if (nextState) {
                 this.setState({
                     potentialNextState: nextState,
@@ -65,14 +70,18 @@ class App extends Component {
         };
     };
 
-    _fillWithColor = (x, y, color) => {
+    newGame = () => {
+        this.setState({...initialState})
+    };
+
+    _fillWithNumber = (x, y, number) => {
         // Fill w black circle
         const {boardState} = this.state;
         const canFill = this._canFill(x, y);
         if (!canFill) {
             return null;
         }
-        return this._replaceSquare(boardState, x, y, {fill: color});
+        return this._replaceSquare(boardState, x, y, number);
     };
 
     _replaceSquare = (board, x, y, replaceWith) => {
@@ -96,18 +105,29 @@ class App extends Component {
     };
 
     render() {
-        const {potentialNextState, loading, complete, playerWon} = this.state;
+        const {potentialNextState, loading, complete, winner} = this.state;
+        const winnerMap = {
+            0: 'It was a tie!',
+            1: 'You win!',
+            2: 'You lost!',
+        };
         return (
             <div className="App">
                 <header>Tic Tac Toe</header>
                 {loading ? <h2>Thinking...</h2> : null}
                 {
                     complete
-                        ? <h2>Game Over: {`you ${playerWon ? 'won': 'lost'}!`}</h2>
+                        ? <h2>Game Over: {winnerMap[winner]}</h2>
                         : null
                 }
                 <Board boardState={potentialNextState} clickHandleGenerator={this.clickHandleGenerator}/>
-                <button className={'save'} onClick={this.saveMove}>Save Move</button>
+
+                {
+                    complete
+                    ? null
+                    : <button className={'save'} onClick={this.saveMove}>Save Move</button>
+                }
+                <button className={'save'} onClick={this.newGame}>New Game</button>
             </div>
         );
     }

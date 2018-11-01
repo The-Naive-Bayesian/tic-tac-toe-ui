@@ -3,7 +3,20 @@ import './Board.css';
 import Square from "./Square";
 
 const Board = ({boardState, clickHandleGenerator}) => {
-    const squareMapGenerator = (y) => (icon, x) => <Square icon={icon} onClick={clickHandleGenerator(x, y)} key={`(${x},${y})`} />;
+    const valueMap = {
+        0: null,
+        1: {fill: 'black'},
+        2: {fill: 'red'},
+        3: {fill: 'grey'},
+    };
+
+    const squareMapGenerator = (y) => (value, x) => (
+        <Square
+            icon={valueMap[value]}
+            onClick={clickHandleGenerator(x, y)}
+            key={`(${x},${y})`}
+        />
+    );
 
     const mapRows = (row, y) => (
         <div className={'row'} key={y}>
